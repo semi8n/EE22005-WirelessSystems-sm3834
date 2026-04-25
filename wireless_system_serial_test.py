@@ -1,10 +1,12 @@
 import serial
 import matplotlib.pyplot as plt
-import time
+import csv
+import statistics
 
 # Configuration
 COM_PORT = 'COM7'
 NUM_SAMPLES = 200
+CSV_FILENAME = 'rssi_data.csv'
 
 # Initialize an empty list to store the data
 data = []
@@ -30,7 +32,6 @@ try:
                 try:
                     data.append(int(line))
                 except ValueError:
-                    # Ignore lines that aren't integers
                     pass
 
         print("Data logging complete.")
@@ -38,26 +39,41 @@ try:
 except serial.SerialException as e:
     print(f"Error: {e}")
 
-# Calculate average
-avg_rssi = average_signal(data)
-
-if avg_rssi is not None:
-    print(f"Average RSSI over {len(data)} samples: {avg_rssi:.2f} dBm")
-
-# Plot the data
+# Calculate statistics
 if data:
+    avg_rssi = average_signal(data)
+    min_rssi = min(data)
+    max_rssi = max(data)
+    std_rssi = statistics.stdev(data) if len(data) > 1 else 0
+
+    print(f"Average RSSI over {len(data)} samples: {avg_rssi:.2f} dBm")
+    print(f"Minimum RSSI: {min_rssi} dBm")
+    print(f"Maximum RSSI: {max_rssi} dBm")
+    print(f"Standard deviation: {std_rssi:.2f} dBm")
+
+    # Save data to CSV
+    with open(CSV_FILENAME, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Sample Index", "RSSI (dBm)"])
+        for i, value in enumerate(data, start=1):
+            writer.writerow([i, value])
+
+    print(f"Data saved to {CSV_FILENAME}")
+
+    # Plot the data
     plt.figure(figsize=(10, 6))
-    plt.plot(data, label="Serial Data")
+    plt.plot(data, label="RSSI Measurements")
 
     # Plot average line
     plt.axhline(avg_rssi, linestyle='--',
                 label=f"Average = {avg_rssi:.1f} dBm")
 
-    plt.title("Serial Data Plot")
+    plt.title("RSSI Measurements from Serial Receiver")
     plt.xlabel("Sample Index")
     plt.ylabel("RSSI [dBm]")
     plt.legend()
     plt.grid()
     plt.show()
+
 else:
     print("No data collected")
